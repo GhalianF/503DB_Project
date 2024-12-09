@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Car Parts Database</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h1>Car Parts Database Management</h1>
+
+    <div id="car-form">
+        <h2>Add New Car</h2>
+        <form id="newCarForm">
+            <input type="text" id="carMake" placeholder="Make" required>
+            <input type="text" id="carModel" placeholder="Model" required>
+            <input type="number" id="carYear" placeholder="Year" required>
+            <button type="submit">Add Car</button>
+        </form>
+    </div>
+
+    <div id="part-form">
+        <h2>Add New Car Part</h2>
+        <form id="newPartForm">
+            <select id="carSelect" required>
+                <option value="">Select Car</option>
+                <!-- Dynamic car options will be populated here -->
+            </select>
+            <input type="text" id="partName" placeholder="Part Name" required>
+            <input type="text" id="partDescription" placeholder="Description">
+            <input type="number" id="partPrice" placeholder="Price" step="0.01" required>
+            <button type="submit">Add Part</button>
+        </form>
+    </div>
+
+    <div id="parts-list">
+        <h2>All Parts</h2>
+        <table id="partsTable">
+            <thead>
+                <tr>
+                    <th>Part Name</th>
+                    <th>Description</th>
+                    <th>Price</th>
+                    <th>Car</th>
+                </tr>
+            </thead>
+            <tbody id="partsTableBody">
+                <!-- Parts will be dynamically inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Fetch and populate cars dropdown
+        async function populateCars() {
+            try {
+                const response = await fetch('/cars/');
+                const cars = await response.json();
+                const carSelect = document.getElementById('carSelect');
+                carSelect.innerHTML = '<option value="">Select Car</option>'; // Reset
+                cars.forEach(car => {
+                    const option = document.createElement('option');
+                    option.value = car.id;
+                    option.textContent = `${car.make} ${car.model} (${car.year})`;
+                    carSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error fetching cars:', error);
+            }
+        }
+
+        // Fetch and display all parts
+        async function loadAllParts() {
+            try {
+                const response = await fetch('/all-parts/');
+                const parts = await response.json();
+                const partsTableBody = document.getElementById('partsTableBody');
+                partsTableBody.innerHTML = ''; // Clear existing rows
+
+                parts.forEach(part => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${part.name}</td>
+                        <td>${part.description || 'N/A'}</td>
+                        <td>$${part.price.toFixed(2)}</td>
+                        <td>${part.car ? `${part.car.make} ${part.car.model} (${part.car.year})` : 'No Car'}</td>
+                    `;
+                    partsTableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching parts:', error);
+            }
+        }
+
+        document.getElementById('newCarForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const carData = {
+                make: document.getElementById('carMake').value,
+                model: document.getElementById('carModel').value,
+                year: parseInt(document.getElementById('carYear').value)
+            };
+
+            try {
+                const response = await fetch('/cars/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(carData)
+                });
+                const newCar = await response.json();
+                alert(`Car added: ${newCar.make} ${newCar.model}`);
+                populateCars(); // Refresh dropdown
+                e.target.reset(); // Clear form
+            } catch (error) {
+                console.error('Error adding car:', error);
+            }
+        });
+
+        document.getElementById('newPartForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const partData = {
+                car_id: parseInt(document.getElementById('carSelect').value),
+                name: document.getElementById('partName').value,
+                description: document.getElementById('partDescription').value,
+                price: parseFloat(document.getElementById('partPrice').value)
+            };
+
+            try {
+                const response = await fetch('/parts/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(partData)
+                });
+                const newPart = await response.json();
+                alert(`Part added: ${newPart.name}`);
+                e.target.reset(); // Clear form
+                loadAllParts(); // Refresh parts list
+            } catch (error) {
+                console.error('Error adding part:', error);
+            }
+        });
+
+        // Populate cars and parts on page load
+        populateCars();
+        loadAllParts();
+    </script>
+</body>
+</html>
